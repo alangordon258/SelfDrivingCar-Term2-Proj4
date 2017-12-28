@@ -11,7 +11,7 @@ This repository contains my submission for the PID Controller Project, which is 
 
 
 ### How The Steering Coefficients Were Determined
-I knew from my study of harmonic systems as an undergraduate engineering student that the coefficient Kp was the equivalent of a spring constant and Kd was the equivalent of a damping coefficient. My intuition told me that the integral coefficient Ki would be small and that the control response of the vehicle would be dominated by the spring and damping terms. 
+I knew from my study of harmonic systems as an undergraduate engineering student that the coefficient Kp was the equivalent of a spring constant and Kd was the equivalent of a damping coefficient. My intuition told me that the integral coefficient Ki, which is designed to correct bias, would be small and that the control response of the vehicle would be dominated by the spring and damping terms. 
 
  In terms of a starting point for the coefficients, I needed to determine the magnitudes of the proportional, derivative, and integral errors. I added logic to return the maximum error each term after driving a lap, which I found to be about 2000 steps at the default throttle setting of 0.3. In order to get the car around at least once so I could determine the magnitude of the errors, I needed to come up with a set of coefficients that would keep the car on the track for one lap. I started by guessing the following values:
 
@@ -29,13 +29,13 @@ With these values the car didn’t stay on the track for very long. I could see 
 | Kd  | 1.0  |
 | Ki  | 0.0  |
 
-With the car going all the way around now, I could see that the maximum proportional error was of the order of magnitude 10^0 (between 1 and 10), the maximum derivative error was of the order 10^-1 (between 0.1 and 1), and the maximum integral error was of the order 10^2 (between 100 and 1000). If we assume that the control output is between -1 and 1,  then it follows that the Kp must be of order 10^-1, Kd must be of order 10^0, and Ki must be of order 10^-3. I wanted the result of multiplying Ki by the integral error to be at least an order of magnitude less than the other parameters so I reduced that to 10^-4. Hence I adjusted my initial set of parameters to the following:
+With the car going all the way around now, I could see that the maximum proportional error was of the order of magnitude 10^0 (between 1 and 10), the maximum derivative error was of the order 10^-1 (between 0.1 and 1), and the maximum integral error was of the order 10^2 (between 100 and 1000). If we assume that the control output is between -1 and 1,  then it follows that the Kp must be of order 10^-1, Kd must be of order 10^0, and Ki must be of order 10^-3. Hence I adjusted my initial set of parameters to the following:
 
 | PID Coeff | Coeff. Value |
 |:-----:|:-------------:|
 | Kp  | 0.25  |
 | Kd  | 1.0  |
-| Ki  | 0.0001  |
+| Ki  | 0.001  |
 
 Please note that in my code I turned the parameters Kp, Kd, and Ki into an array p of size 3 as follows: 
 ```sh
@@ -47,15 +47,17 @@ Technically, I could have thrown up my hands here and declared victory, but the 
 |:-----:|:-------------:|
 | Kp  | 0.15  |
 | Kd  | 3.0  |
-| Ki  | 0.0001  |
+| Ki  | 0.001  |
 
-At this point, the car was driving quite well and given that the car was clearly at the limit of adhesion in the corner entering the main straight, I figured that I was going to be hard pressed to improve things further using twiddle. I tried anyway and sure enough the coefficients didn’t change significantly after a large number of loops.  
+One question that I had at this point was given the small value of Ki, did it have any affect at all. I changed Ki back to zero and to the naked eye the difference was indiscernable. But the numbers told a different story as the integral error was increasing by approximately 800 per lap so there was indeed a bias. Using the Ki value of 0.001 dropped the value of the integral error down an order of magnitude to approximately 50 per lap. Moreover, it was no longer monotonically increasing. So although it was barely perceptible, the car was hewing closer to the centerline with a nonzero Ki value. 
+
+At this point, the car was driving quite well but I decided to try twiddle anyway. I wound up with the following values which did improve the driving behavior of the car.  
 
 | PID Coeff | Coeff. Value |
 |:-----:|:-------------:|
-| Kp  | 0.15  |
-| Kd  | 3.0327  |
-| Ki  | 0.00010729  |
+| Kp  | 0.135  |
+| Kd  | 2.4627 |
+| Ki  | 0.001  |
 
 The code containing my implementation of twiddle can be found [here](./src).
 
@@ -83,11 +85,13 @@ throttle_value = 0.75 - Kp*ErrorP - Kd*ErrorD - Ki*ErrorI
 ### A Final Tuning with Twiddle
 At this point the car was achieving better than 70 mph on the (relatively) straight section of the track and was sliding through several turns at the limit of adhesion. I figured it would be difficult to go faster without being more heavy handed with the brake, which would spoil the fun and ruin the overall lap time even if it might allow me to achieve a higher speed on the straight. The car was weaving a little bit now as the coefficients for the steering PID controller were optimized for a lower speed. So I froze the throttle controller coefficients to those outlined above and ran twiddle again for the steering starting with the coefficients that I had determined previously. I thought I needed to add more damping, but twiddle actually reduced both Kp and Kd slightly to the following values:
 
-Kp=0.135
-Kd=2.72943
-Ki=0.00011
+| PID Coeff | Coeff. Value |
+|:-----:|:-------------:|
+| Kp  | 0.1215  |
+| Kd  | 2.45649  |
+| Ki  | 0.00091  |
 
-At this point I decided to declare victory. A video of my car can be see here: 
+This improved the behavior of the car to where it was now achieving a peak speed of 75 mph. At this point I decided to declare victory. A video of my car can be see here: 
 [![alt text](./PIDVideoScreenShot.png)](./PIDMovie.MOV)
 
 I did discover one more thing when I tried to capture a video of my car on my MacBook. The software does not have a preset sample rate; it just samples as fast as it can. So if anything causes the frequency of the control input to change (such as running video capture software), it could cause the car to crash. This is what happened to me when I tried to capture video of my car using QuickTime. Running the QuickTime recorder would slow down the sample rate enough to cause the car to crash. This was an important discovery because it raises the possibility that the car will crash when it is run on a different computer by the person grading the assignment. I'll turn the assignment in and see what happens.

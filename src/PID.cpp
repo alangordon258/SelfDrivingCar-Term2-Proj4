@@ -1,6 +1,7 @@
 #include "PID.h"
 #include <cmath>
 #include <iostream>
+#include <limits>
 
 using namespace std;
 
@@ -61,8 +62,8 @@ void PID::UpdateError(double cte) {
         max_p_error=fabs(p_error);
     if (fabs(d_error) > max_d_error)
         max_d_error=fabs(d_error);
-    if (fabs(i_error) > max_i_error)
-        max_i_error=fabs(i_error);
+    // i_error is always increasing
+    max_i_error=fabs(i_error);
     
     // Let error settle with new weights before we start the evaluation
     if (step % (n_steps_eval + n_steps_transition) > n_steps_transition)
